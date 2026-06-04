@@ -8,6 +8,8 @@ genai.configure(api_key=API_KEY)
 
 model = genai.GenerativeModel('gemini-2.5-flash-lite')
 
+#Loads the data, does keyword matching with the disease database, 
+#removes stop words(not necessary for diagnostics) and returns top 3 most relevant diseases.
 class ResearcherAgent:
     def __init__(self):
         try:
@@ -19,7 +21,7 @@ class ResearcherAgent:
     def fetch_evidence(self, user_input):
         user_words = set(re.findall(r'\w+', user_input.lower()))
         matches = []
-        # Stop words to prevent 'Body Weight' from hijacking the search
+        
         stop_words = {"i", "have", "a", "the", "and", "is", "it", "yes", "no", "not", "body", "weight"}
         filtered_input = user_words - stop_words
 
@@ -32,6 +34,9 @@ class ResearcherAgent:
                 matches.append({"id": key, "name": data["name"], "text": data["text"], "source": data["source"], "score": score})
         return sorted(matches, key=lambda x: x["score"], reverse=True)[:3]
 
+
+#Maintains a belief dictionay that is a confidence score of each disease, updates the score based on user responses, 
+#and also maintains conversation history and internal monologues.
 class OrchestratorAgent:
     def __init__(self):
         self.beliefs = {}
@@ -46,13 +51,13 @@ class OrchestratorAgent:
         for item in evidence:
             current = self.beliefs.get(item["name"], 0.0)
             
-            # Logic: If user confirms a specific symptom
+            #If user confirms a specific symptom, score += 0.35
             if any(confirm in clean_input for confirm in ["yes", "yeah", "i have", "stiff", "true"]):
                 self.beliefs[item["name"]] = min(current + 0.35, 0.98)
-            # Logic: If user denies
+            #If user denies, score -= 0.45
             elif any(neg in clean_input for neg in ["no", "not", "never", "don't"]):
                 self.beliefs[item["name"]] = max(current - 0.45, 0.0)
-            else:
+            else: #neutral, score += 0.10
                 self.beliefs[item["name"]] = min(current + 0.1, 0.95)
         
         if not self.beliefs:
@@ -62,17 +67,19 @@ class OrchestratorAgent:
         sorted_beliefs = sorted(self.beliefs.items(), key=lambda x: x[1], reverse=True)
         top_name, top_score = sorted_beliefs[0]
         
-        # Threshold for Gemini 3 diagnosis
+        #Return if score is above the threshold
         if top_score >= 0.88:
             return "DIAGNOSE"
         
         self.monologue = f"Evaluating potential {top_name} ({int(top_score*100)}%)..."
         return "CONTINUE"
 
+#Calls Gemini 2.5 Flash Lite, takes the top scoring disease and takes an unasked keyword symptom from the list
+#prompts gemini to ask a normal question regarding the symptom without telling the disease, if disease is found genrate a HTML summary
 class InterviewerAgent:
     def ask_gemini(self, prompt):
         try:
-            # Gemini 3 often includes 'thoughts' in the response; we grab the text content
+            
             response = model.generate_content(prompt)
             return response.text.strip()
         except Exception as e:
@@ -94,7 +101,6 @@ class InterviewerAgent:
                     target_kw = available[0].lower()
                     asked_questions.append(target_kw)
                     
-                    # PROMPT: Utilizing Gemini 3's better instruction following
                     prompt = (
                         f"SYSTEM: You are a medical interviewer exploring the possibility of {name}.\n"
                         f"CONTEXT: User mentions so far: {history}.\n"
