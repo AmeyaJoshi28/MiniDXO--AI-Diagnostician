@@ -2,11 +2,10 @@ import json
 import re
 import google.generativeai as genai
 
-# Configuration for Gemini 3
+
 API_KEY = "YOUR_GEMINI_KEY"
 genai.configure(api_key=API_KEY)
 
-# UPDATED: Using the Gemini 3 Flash Preview model
 model = genai.GenerativeModel('gemini-2.5-flash-lite')
 
 class ResearcherAgent:
