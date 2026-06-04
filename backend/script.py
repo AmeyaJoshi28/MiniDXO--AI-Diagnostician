@@ -11,10 +11,9 @@ def build_database():
     
     for topic in topics:
         title = topic['@title']
-        # Extract plain text from the summary (removing HTML tags)
+        
         summary = topic.get('full-summary', "No description available.")
         
-        # Create searchable keywords from "Mesh Headings"
         keywords = []
         if 'mesh-heading' in topic:
             headings = topic['mesh-heading']
@@ -26,7 +25,7 @@ def build_database():
         formatted_data[title.lower().replace(" ", "_")] = {
             "name": title,
             "source": "MedlinePlus / NIH",
-            "text": summary[:500] + "...", # Keep snippets concise for the UI
+            "text": summary[:500] + "...", 
             "keywords": keywords
         }
 
