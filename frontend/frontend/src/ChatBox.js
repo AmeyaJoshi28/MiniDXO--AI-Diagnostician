@@ -58,7 +58,7 @@ function ChatBox({ onResponse }) {
         <input 
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+          onKeyDown={(e) => e.key === 'Enter' && handleSend()}   
           placeholder="Describe how you are feeling..."
           disabled={loading}
         />
